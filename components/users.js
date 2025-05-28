@@ -648,7 +648,7 @@ SteamCommunity.prototype.getUserInventoryContents = function(userID, appID, cont
 			}
 
 			for (var i = 0; i < body.assets.length; i++) {
-				var description = getDescription(body.descriptions, body.assets[i].classid, body.assets[i].instanceid);
+				var description = getDescription(body.descriptions, body.assets[i].classid, body.assets[i].instanceid, body.assets[i].assetid);
 
 				if (!tradableOnly || (description && description.tradable)) {
 					body.assets[i].pos = pos++;
@@ -667,19 +667,31 @@ SteamCommunity.prototype.getUserInventoryContents = function(userID, appID, cont
 	// A bit of optimization; objects are hash tables so it's more efficient to look up by key than to iterate an array
 	var quickDescriptionLookup = {};
 
-	function getDescription(descriptions, classID, instanceID) {
-		var key = classID + '_' + (instanceID || '0'); // instanceID can be undefined, in which case it's 0.
+	function getDescription(descriptions, classID, instanceID, assetID) {
+		const classKey = classID + '_' + (instanceID || '0'); // instanceID can be undefined, in which case it's 0.
 
-		if (quickDescriptionLookup[key]) {
-			return quickDescriptionLookup[key];
+		if (assetID && quickDescriptionLookup[assetID]) {
+			return quickDescriptionLookup[assetID];
+		}
+		if (quickDescriptionLookup[classKey]) {
+			return quickDescriptionLookup[classKey];
+		}
+		for (let i = 0; i < descriptions.length; i++) {
+			const desc = descriptions[i];
+			const ck = desc.classid + '_' + (desc.instanceid || '0');
+			quickDescriptionLookup[ck] = desc;
+
+			if (desc.assetid) {
+				quickDescriptionLookup[desc.assetid] = desc;
+			}
 		}
 
-		for (var i = 0; i < descriptions.length; i++) {
-			quickDescriptionLookup[descriptions[i].classid + '_' + (descriptions[i].instanceid || '0')] = descriptions[i];
+		if (assetID && quickDescriptionLookup[assetID]) {
+			return quickDescriptionLookup[assetID];
 		}
-
-		return quickDescriptionLookup[key];
+		return quickDescriptionLookup[classKey];
 	}
+
 };
 
 /**
